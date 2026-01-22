@@ -68,6 +68,11 @@ class TimerRecord {
     var moodRawValue: String?  // 心情（存储 Mood.rawValue）
     var category: String?      // 类别名称
 
+    // 间隔提醒相关字段
+    var reminderInterval: TimeInterval?  // 提醒间隔（秒）
+    var nextReminderTime: Date?          // 下次提醒时间
+    var reminderEnabled: Bool = false    // 是否启用提醒
+
     init(activityName: String) {
         self.id = UUID()
         self.activityName = activityName
@@ -78,6 +83,9 @@ class TimerRecord {
         self.note = nil
         self.moodRawValue = nil
         self.category = nil
+        self.reminderInterval = nil
+        self.nextReminderTime = nil
+        self.reminderEnabled = false
     }
 
     // 心情的便捷访问

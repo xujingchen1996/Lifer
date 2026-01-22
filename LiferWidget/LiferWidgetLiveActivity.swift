@@ -31,26 +31,50 @@ struct LiferWidgetLiveActivity: Widget {
                             .fontWeight(.medium)
                             .lineLimit(1)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text(elapsedTimeString(from: context.state.elapsedTime))
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .monospacedDigit()
-                        .foregroundColor(.primary)
+                    if !context.state.isPaused && context.state.isActive {
+                        // 运行中：使用系统timer样式，自动刷新
+                        Text(context.state.startTime, style: .timer)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .monospacedDigit()
+                            .foregroundColor(.primary)
+                    } else {
+                        // 暂停中：显示固定时间
+                        Text(elapsedTimeString(from: context.state.elapsedTime))
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .monospacedDigit()
+                            .foregroundColor(.primary)
+                    }
+                }
+                // 添加底部区域用于垂直居中
+                DynamicIslandExpandedRegion(.bottom) {
+                    EmptyView()
                 }
             } compactLeading: {
-                // 紧凑模式 - 左侧
+                // 紧凑模式 - 左侧：图标
                 Image(systemName: context.attributes.iconName)
                     .foregroundColor(Color(hex: context.attributes.colorHex))
                     .font(.caption)
             } compactTrailing: {
-                // 紧凑模式 - 右侧
-                Text(elapsedTimeString(from: context.state.elapsedTime))
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
+                // 紧凑模式 - 右侧：系统自动刷新的timer
+                if !context.state.isPaused && context.state.isActive {
+                    // 运行中：使用系统timer样式
+                    Text(context.state.startTime, style: .timer)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .monospacedDigit()
+                } else {
+                    // 暂停中：显示固定时间
+                    Text(elapsedTimeString(from: context.state.elapsedTime))
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .monospacedDigit()
+                }
             } minimal: {
                 // 最小模式 - 只显示图标
                 Image(systemName: context.attributes.iconName)
@@ -68,7 +92,7 @@ struct LockScreenLiveActivityView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 上半部分 - 活动名称
+            // 上半部分 - 活动名称（在左边）
             HStack {
                 Image(systemName: attributes.iconName)
                     .font(.caption2)
@@ -84,13 +108,24 @@ struct LockScreenLiveActivityView: View {
             .padding(.vertical, 10)
             .background(background)
 
-            // 下半部分 - 计时显示
+            // 下半部分 - 计时显示（居中）
             HStack {
                 Spacer()
-                Text(elapsedTimeString(from: state.elapsedTime))
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundColor(timerColor)
+                if !state.isPaused && state.isActive {
+                    // 运行中：使用系统timer样式，自动刷新
+                    Text(state.startTime, style: .timer)
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(timerColor)
+                        .frame(minWidth: 120, alignment: .center)
+                } else {
+                    // 暂停中：显示固定时间
+                    Text(elapsedTimeString(from: state.elapsedTime))
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(timerColor)
+                        .frame(minWidth: 120, alignment: .center)
+                }
                 Spacer()
             }
             .frame(maxWidth: .infinity)
@@ -127,6 +162,35 @@ private func elapsedTimeString(from seconds: TimeInterval) -> String {
     } else {
         return String(format: "%02d:%02d", minutes, secs)
     }
+}
+
+/// 将秒数转换为紧凑时间字符串 (仅 MM:SS，用于紧凑模式)
+private func compactTimeString(from seconds: TimeInterval) -> String {
+    let minutes = Int(seconds) / 60
+    let secs = Int(seconds) % 60
+
+    // 超过60分钟显示小时，否则只显示分钟:秒
+    if minutes >= 60 {
+        let hours = minutes / 60
+        let mins = minutes % 60
+        return String(format: "%d:%02d", hours, mins)
+    } else {
+        return String(format: "%d:%02d", minutes, secs)
+    }
+}
+
+/// 计算经过时间（直接使用app传递的值）
+private func elapsedTime(for context: ActivityViewContext<LiferActivityAttributes>) -> TimeInterval {
+    // 直接使用app传递的 elapsedTime 值
+    // app会定期更新这个值，Widget只需显示
+    return context.state.elapsedTime
+}
+
+/// 计算经过时间（用于锁屏视图）
+private func elapsedTime(for data: (attributes: LiferActivityAttributes, state: LiferActivityAttributes.ContentState)) -> TimeInterval {
+    // 直接使用app传递的 elapsedTime 值
+    // app会定期更新这个值，Widget只需显示
+    return data.state.elapsedTime
 }
 
 // MARK: - Color Extension for HEX support

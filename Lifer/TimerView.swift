@@ -9,19 +9,27 @@ import SwiftUI
 import SwiftData
 import Combine
 import ActivityKit
+import AVFoundation
+import UserNotifications
 
 // 类型别名以避免命名冲突
 typealias LiveActivity = ActivityKit.Activity<LiferActivityAttributes>
 
 struct TimerView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var isTimerActive = false
+    @State private var isTimerActive = false  // 控制输入界面 vs 计时界面
+    @State private var isPaused = false      // 控制暂停 vs 运行（不影响界面切换）
     @State private var showingActivityInput = false
     @State private var activityName = ""
     @State private var currentRecord: TimerRecord?
     @State private var elapsedTime: TimeInterval = 0
+    @State private var startTime: Date?  // 存储真实的开始时间
+    @State private var pausedTimeAccumulated: TimeInterval = 0  // 暂停前的累计时间
     @State private var longPressProgress: CGFloat = 0
     @State private var longPressTimer: Timer?
+
+    // 主题管理器
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     // Combine 订阅管理
     @State private var cancellables = Set<AnyCancellable>()
@@ -33,8 +41,14 @@ struct TimerView: View {
     @State private var selectedCategory: ActivityCategory = .reading
 
     // Live Activity 状态
-    @State private var liveActivity: LiveActivity?
-    @State private var liveActivityUpdateTimer: Timer?
+    private typealias Attributes = LiferActivityAttributes
+    @State private var liveActivity: ActivityKit.Activity<Attributes>?
+
+    // 间隔提醒状态
+    @State private var reminderInterval: ReminderInterval = .none
+    @State private var lastReminderTriggerTime: Date?  // 上次触发提醒的时间
+    @State private var showReminderCountdown = true  // 控制倒计时显示
+    @State private var countdownDisplay: TimeInterval = 0  // 用于触发视图更新的倒计时显示值
 
     // 最近使用的活动列表
     @Query(sort: \Lifer.Activity.name) private var recentActivities: [Lifer.Activity]
@@ -108,20 +122,35 @@ struct TimerView: View {
 
         switch newPhase {
         case .background:
+            print("📱 进入后台 - 记录时间")
             // 记录进入后台的时间
             backgroundTime = Date()
         case .active:
-            // 从后台恢复时，计算实际经过时间
-            if let bgTime = backgroundTime {
-                let elapsedInBackground = Date().timeIntervalSince(bgTime)
-                elapsedTime += elapsedInBackground
+            print("📱 返回前台 - 重新计算时间")
+            // 从后台恢复时，使用累计时间重新计算
+            if let bgTime = backgroundTime, let start = startTime {
+                // 计算当前 session 的时间
+                let currentSessionTime = Date().timeIntervalSince(start)
+                // 加上之前累计的暂停时间
+                let totalElapsed = pausedTimeAccumulated + currentSessionTime
+                elapsedTime = totalElapsed
                 backgroundTime = nil
+
+                print("   后台经过: \(String(format: "%.1f", Date().timeIntervalSince(bgTime)))秒")
+                print("   累计暂停: \(pausedTimeAccumulated)秒")
+                print("   当前Session: \(String(format: "%.1f", currentSessionTime))秒")
+                print("   总计时间: \(timeString(from: totalElapsed))")
             }
         default:
             break
         }
     }
-    
+
+    /// 检查并补发错过的提醒（已废弃 - 不再补发后台提醒）
+    private func checkMissedReminders() {
+        // 不再使用 - 用户只需要 App 内的提醒
+    }
+
     // 未计时状态界面
     private var inactiveTimerView: some View {
         VStack(spacing: 30) {
@@ -141,14 +170,14 @@ struct TimerView: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.7)]),
+                                gradient: Gradient(colors: [themeManager.currentColor, themeManager.currentColor.opacity(0.7)]),
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .frame(width: 200, height: 200)
                         .shadow(radius: 10)
-                    
+
                     Text("开始计时")
                         .font(.title)
                         .fontWeight(.bold)
@@ -218,7 +247,51 @@ struct TimerView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.primary)
                 .padding(.top, 50)
-            
+
+            // 间隔提醒倒计时显示（带隐藏开关）
+            if reminderInterval != .none && showReminderCountdown {
+                HStack(spacing: 8) {
+                    Image(systemName: "bell")
+                        .foregroundColor(.orange)
+                    Text("下次提醒: \(formatCountdown(countdownDisplay))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    // 隐藏倒计时按钮
+                    Button(action: {
+                        withAnimation {
+                            showReminderCountdown = false
+                        }
+                    }) {
+                        Image(systemName: "eye.slash.fill")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.orange.opacity(0.1))
+                .cornerRadius(12)
+            }
+
+            // 提醒已启用但倒计时隐藏时，显示小图标可以重新打开
+            if reminderInterval != .none && !showReminderCountdown {
+                Button(action: {
+                    withAnimation {
+                        showReminderCountdown = true
+                    }
+                }) {
+                    Image(systemName: "eye.slash")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                        .padding(8)
+                        .background(Color.secondary.opacity(0.1))
+                        .cornerRadius(8)
+                }
+            }
+
             Spacer()
             
             // 计时显示
@@ -234,22 +307,20 @@ struct TimerView: View {
             HStack(spacing: 50) {
                 // 暂停/继续按钮
                 Button(action: {
-                    if let record = currentRecord {
-                        if record.isActive {
-                            pauseTimer()
-                        } else {
-                            resumeTimer()
-                        }
+                    if isPaused {
+                        resumeTimer()
+                    } else {
+                        pauseTimer()
                     }
                 }) {
                     ZStack {
                         Circle()
-                            .fill(Color.blue.opacity(0.2))
+                            .fill(themeManager.currentColor.opacity(0.2))
                             .frame(width: 80, height: 80)
-                        
-                        Image(systemName: currentRecord?.isActive == true ? "pause.fill" : "play.fill")
+
+                        Image(systemName: isPaused ? "play.fill" : "pause.fill")
                             .font(.system(size: 30))
-                            .foregroundColor(.blue)
+                            .foregroundColor(themeManager.currentColor)
                     }
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -346,6 +417,27 @@ struct TimerView: View {
                 }
                 .padding(.horizontal)
 
+                // 间隔提醒设置
+                NavigationLink {
+                    ReminderIntervalPickerView(selectedInterval: $reminderInterval)
+                } label: {
+                    HStack {
+                        Image(systemName: "bell")
+                            .foregroundColor(.orange)
+                        Text("间隔提醒")
+                        Spacer()
+                        Text(reminderInterval.displayName)
+                            .foregroundColor(.secondary)
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    }
+                    .padding()
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(10)
+                }
+                .padding(.horizontal)
+
                 Spacer()
 
                 // 开始计时按钮
@@ -357,7 +449,7 @@ struct TimerView: View {
                 .foregroundColor(.white)
                 .padding()
                 .frame(maxWidth: .infinity)
-                .background(activityName.isEmpty ? Color.gray : Color.blue)
+                .background(activityName.isEmpty ? Color.gray : themeManager.currentColor)
                 .cornerRadius(10)
                 .padding()
                 .disabled(activityName.isEmpty)
@@ -390,14 +482,35 @@ struct TimerView: View {
 
         isTimerActive = true
         elapsedTime = 0
+        pausedTimeAccumulated = 0  // 重置累计时间
+        startTime = Date()  // 存储真实的开始时间
 
-        // 使用 Combine Timer 替代 Foundation Timer (性能优化: 1秒更新一次)
+        // 使用 Combine Timer - 统一处理主计时和间隔提醒
         Timer.publish(every: 1.0, on: .main, in: .common)
             .autoconnect()
-            .sink { _ in
-                elapsedTime += 1.0
+            .sink { [self] _ in
+                // 只在未暂停时更新
+                guard !self.isPaused else { return }
+
+                // 1. 更新主计时 - 使用累计时间
+                if let start = self.startTime {
+                    let currentSessionTime = Date().timeIntervalSince(start)
+                    self.elapsedTime = self.pausedTimeAccumulated + currentSessionTime
+                }
+
+                // 2. 检查并触发间隔提醒
+                self.checkAndTriggerReminder()
             }
             .store(in: &cancellables)
+
+        // 配置提醒初始状态
+        if reminderInterval != .none {
+            currentRecord?.reminderEnabled = true
+            currentRecord?.reminderInterval = reminderInterval.rawValue
+            lastReminderTriggerTime = Date()  // 记录开始时间
+            showReminderCountdown = true
+            // 不再启动单独的提醒 Timer - 在主计时器里检查
+        }
 
         // 启动 Live Activity (iOS 16.1+)
         if #available(iOS 16.1, *) {
@@ -410,7 +523,14 @@ struct TimerView: View {
         // 取消所有计时器订阅
         cancellables.removeAll()
 
-        if var record = currentRecord {
+        // 保存暂停前的累计时间
+        pausedTimeAccumulated = elapsedTime
+
+        // 更新暂停状态（不影响界面切换）
+        isPaused = true
+
+        // 更新记录状态
+        if let record = currentRecord {
             record.isActive = false
 
             // 记录暂停时间
@@ -419,15 +539,21 @@ struct TimerView: View {
             record.pauseIntervals = intervals
         }
 
+        print("⏸️ 计时已暂停，累计时间: \(pausedTimeAccumulated)秒")
+
         // 暂停 Live Activity
         if #available(iOS 16.1, *) {
             pauseLiveActivity()
         }
     }
-    
+
     // 继续计时
     private func resumeTimer() {
-        if var record = currentRecord {
+        // 更新暂停状态（不影响界面切换）
+        isPaused = false
+
+        // 更新记录状态
+        if let record = currentRecord {
             record.isActive = true
 
             // 记录恢复时间
@@ -437,19 +563,38 @@ struct TimerView: View {
                 intervals.append(lastInterval)
                 record.pauseIntervals = intervals
             }
-
-            // 使用 Combine Timer (性能优化: 1秒更新一次)
-            Timer.publish(every: 1.0, on: .main, in: .common)
-                .autoconnect()
-                .sink { _ in
-                    elapsedTime += 1.0
-                }
-                .store(in: &cancellables)
         }
 
-        // 恢复 Live Activity
+        // 计算虚拟的 startTime，使得 Widget 从累计时间开始显示
+        // 公式：Date().timeIntervalSince(virtualStartTime) = pausedTimeAccumulated
+        let virtualStartTime = Date().addingTimeInterval(-pausedTimeAccumulated)
+
+        // app 内使用真实时间计算 session 时间
+        startTime = Date()
+
+        // 重新启动主计时器
+        Timer.publish(every: 1.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [self] _ in
+                // 只在未暂停时更新
+                guard !self.isPaused else { return }
+
+                // 1. 更新主计时 - 使用累计时间
+                if let start = self.startTime {
+                    let currentSessionTime = Date().timeIntervalSince(start)
+                    self.elapsedTime = self.pausedTimeAccumulated + currentSessionTime
+                }
+
+                // 2. 检查间隔提醒
+                self.checkAndTriggerReminder()
+            }
+            .store(in: &cancellables)
+
+        print("▶️ 计时已恢复，从累计时间: \(pausedTimeAccumulated)秒 继续，虚拟 startTime: \(virtualStartTime)")
+
+        // 恢复 Live Activity（使用虚拟 startTime）
         if #available(iOS 16.1, *) {
-            resumeLiveActivity()
+            resumeLiveActivity(virtualStartTime: virtualStartTime)
         }
     }
     
@@ -478,8 +623,11 @@ struct TimerView: View {
         }
 
         isTimerActive = false
+        isPaused = false  // 重置暂停状态
         currentRecord = nil
         activityName = ""
+        elapsedTime = 0
+        startTime = nil  // 重置开始时间
         backgroundTime = nil
 
         // 结束 Live Activity
@@ -528,11 +676,14 @@ struct TimerView: View {
         return
         #endif
 
+        // 使用存储的 startTime（计时器开始的时间），而不是创建 Activity 的时间
+        let actualStartTime = startTime ?? Date()
+
         let attributes = LiferActivityAttributes(
             activityName: activityName,
             iconName: currentCategoryIcon,
             colorHex: currentCategoryColorHex,
-            startTime: Date()
+            startTime: actualStartTime  // 使用计时器开始时间
         )
 
         // 读取深色模式设置
@@ -541,16 +692,23 @@ struct TimerView: View {
         let initialState = LiferActivityAttributes.ContentState(
             elapsedTime: 0,
             isActive: true,
-            startTime: Date(),
+            startTime: actualStartTime,  // 使用计时器开始时间
             lastUpdateTime: Date(),
             isDarkMode: darkModeEnabled
         )
 
         do {
             // 使用 ActivityKit 启动 Live Activity
+            print("🚀 启动 Live Activity:")
+            print("   活动: \(activityName)")
+            print("   开始时间: \(actualStartTime)")
+
+            // 设置初始 staleDate
+            let initialStaleDate = Date().addingTimeInterval(2.0)
+
             liveActivity = try ActivityKit.Activity.request(
                 attributes: attributes,
-                content: .init(state: initialState, staleDate: nil),
+                content: .init(state: initialState, staleDate: initialStaleDate),
                 pushType: nil
             )
             print("✅ Live Activity 已启动")
@@ -558,7 +716,7 @@ struct TimerView: View {
                 print("   Activity ID: \(id)")
             }
 
-            // 启动定期更新计时器
+            // 启动定期更新 Timer - 每 2 秒更新一次，触发 Widget 重新渲染
             startLiveActivityUpdateTimer()
         } catch {
             print("❌ 启动 Live Activity 失败:")
@@ -566,52 +724,118 @@ struct TimerView: View {
             print("\n💡 提示:")
             print("   1. 确保在设置中启用了实时活动")
             print("   2. Live Activity 需要 Widget Extension 支持")
-            print("   3. 当前实现可能需要额外配置")
         }
     }
 
-    /// 更新 Live Activity (定期调用)
+    /// 更新 Live Activity 状态（只在状态变化时调用）
     @available(iOS 16.1, *)
-    private func updateLiveActivity() {
-        guard let liveActivity = liveActivity else { return }
+    private func updateLiveActivityState(isPaused: Bool = false) {
+        guard let liveActivity = liveActivity, let start = startTime else { return }
 
         // 读取深色模式设置
         let darkModeEnabled = UserDefaults.standard.bool(forKey: "darkModeEnabled")
 
+        // 暂停时保存累计时间，运行时使用 0（Widget 用 startTime 自动计算）
+        let savedElapsed = isPaused ? elapsedTime : 0
+
         let updatedState = LiferActivityAttributes.ContentState(
-            elapsedTime: elapsedTime,
-            isActive: currentRecord?.isActive ?? true,
-            startTime: Date().addingTimeInterval(-elapsedTime),
+            elapsedTime: savedElapsed,  // 暂停时保存累计时间
+            isActive: !isPaused,        // 暂停时 false，运行时 true
+            isPaused: isPaused,         // 跟踪暂停状态
+            startTime: start,
             lastUpdateTime: Date(),
             isDarkMode: darkModeEnabled
         )
 
+        print("⏱️ 更新 Live Activity 状态: \(isPaused ? "暂停" : "运行"), 累计时间: \(savedElapsed)秒")
+
+        // 立即更新，确保拉出实时活动时显示最新状态
+        let staleDate = Date()
+
         Task {
-            await liveActivity.update(.init(state: updatedState, staleDate: nil))
+            await liveActivity.update(.init(state: updatedState, staleDate: staleDate))
+            print("✅ Live Activity 状态已更新")
+        }
+    }
+
+    /// 启动 Live Activity - Widget使用系统timer样式自动刷新
+    @available(iOS 16.1, *)
+    private func startLiveActivityUpdateTimer() {
+        // Widget使用Text(date, style: .timer)自动刷新，不需要app定期推送更新
+        // 只在状态变化（暂停/恢复/主题切换）时调用updateLiveActivityForRender()
+        print("⏰ Live Activity 自动刷新模式已启用")
+    }
+
+    /// 更新 Live Activity 状态（暂停/恢复/主题切换）
+    /// 注意：由于Widget现在使用系统timer样式，不需要更新elapsedTime
+    @available(iOS 16.1, *)
+    private func updateLiveActivityForRender() {
+        guard let liveActivity = liveActivity, let start = startTime else {
+            print("⚠️ Live Activity 更新跳过: liveActivity=\(liveActivity != nil), startTime=\(startTime != nil)")
+            return
+        }
+
+        print("🔄 Live Activity 状态更新")
+
+        // 读取深色模式设置
+        let darkModeEnabled = UserDefaults.standard.bool(forKey: "darkModeEnabled")
+
+        // 只更新状态和主题，Widget使用startTime自动计算时间
+        let updatedState = LiferActivityAttributes.ContentState(
+            elapsedTime: Date().timeIntervalSince(start),  // 仅用于初始值
+            isActive: currentRecord?.isActive ?? true,
+            isPaused: isPaused,  // 同步暂停状态
+            startTime: start,
+            lastUpdateTime: Date(),
+            isDarkMode: darkModeEnabled
+        )
+
+        // staleDate设置为较远的未来，状态变化时才需要更新
+        let staleDate = Date().addingTimeInterval(3600)
+
+        Task {
+            do {
+                try await liveActivity.update(.init(state: updatedState, staleDate: staleDate))
+                print("✅ Live Activity 状态更新成功")
+            } catch {
+                print("❌ Live Activity 状态更新失败: \(error)")
+            }
         }
     }
 
     /// 暂停 Live Activity
     @available(iOS 16.1, *)
     private func pauseLiveActivity() {
-        guard let liveActivity = liveActivity else { return }
-
-        let pausedState = LiferActivityAttributes.ContentState(
-            elapsedTime: elapsedTime,
-            isActive: false,
-            startTime: Date().addingTimeInterval(-elapsedTime),
-            lastUpdateTime: Date()
-        )
-
-        Task {
-            await liveActivity.update(.init(state: pausedState, staleDate: nil))
-        }
+        updateLiveActivityState(isPaused: true)
     }
 
     /// 恢复 Live Activity
     @available(iOS 16.1, *)
-    private func resumeLiveActivity() {
-        updateLiveActivity()
+    private func resumeLiveActivity(virtualStartTime: Date) {
+        guard let liveActivity = liveActivity else { return }
+
+        // 读取深色模式设置
+        let darkModeEnabled = UserDefaults.standard.bool(forKey: "darkModeEnabled")
+
+        // 使用虚拟的 startTime，使得 Widget 从累计时间开始显示
+        let updatedState = LiferActivityAttributes.ContentState(
+            elapsedTime: 0,  // 运行时使用 startTime 自动计算
+            isActive: true,
+            isPaused: false,
+            startTime: virtualStartTime,  // 使用虚拟的 startTime
+            lastUpdateTime: Date(),
+            isDarkMode: darkModeEnabled
+        )
+
+        print("⏱️ 恢复 Live Activity，使用虚拟 startTime: \(virtualStartTime)，累计时间: \(pausedTimeAccumulated)秒")
+
+        // 立即更新，确保拉出实时活动时显示最新状态
+        let staleDate = Date()
+
+        Task {
+            await liveActivity.update(.init(state: updatedState, staleDate: staleDate))
+            print("✅ Live Activity 已恢复")
+        }
     }
 
     /// 结束 Live Activity
@@ -619,35 +843,95 @@ struct TimerView: View {
     private func endLiveActivity() {
         guard let liveActivity = liveActivity else { return }
 
-        let finalState = LiferActivityAttributes.ContentState(
-            elapsedTime: elapsedTime,
-            isActive: false,
-            startTime: Date().addingTimeInterval(-elapsedTime),
-            lastUpdateTime: Date()
-        )
+        print("⏹️ 结束 Live Activity")
 
         Task {
             await liveActivity.end(nil, dismissalPolicy: .immediate)
         }
 
         self.liveActivity = nil
-        liveActivityUpdateTimer?.invalidate()
-        liveActivityUpdateTimer = nil
-
-        print("Live Activity 已结束")
     }
 
-    /// 启动 Live Activity 更新计时器
-    private func startLiveActivityUpdateTimer() {
-        // 每秒更新一次 Live Activity
-        liveActivityUpdateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            guard self.liveActivity != nil else { return }
+    // MARK: - 间隔提醒功能
 
-            if #available(iOS 16.1, *) {
-                self.updateLiveActivity()
-            }
+    /// 计算倒计时（基于累计的elapsedTime）
+    private var calculatedReminderCountdown: TimeInterval {
+        guard reminderInterval != .none else {
+            return reminderInterval.rawValue
         }
+
+        // 使用累计的 elapsedTime 计算当前周期位置
+        let totalElapsed = elapsedTime
+        let cyclePosition = totalElapsed.truncatingRemainder(dividingBy: reminderInterval.rawValue)
+        let remaining = reminderInterval.rawValue - cyclePosition
+
+        return max(0, remaining)
+    }
+
+    /// 检查并触发提醒 - 在主计时器回调中调用
+    private func checkAndTriggerReminder() {
+        guard reminderInterval != .none else {
+            // 更新倒计时显示
+            countdownDisplay = calculatedReminderCountdown
+            return
+        }
+
+        // 更新倒计时显示
+        countdownDisplay = calculatedReminderCountdown
+
+        // 基于累计的 elapsedTime 计算是否应该触发提醒
+        // 使用累计的 elapsedTime 而不是重新计算
+        let totalElapsed = elapsedTime
+        let cyclePosition = totalElapsed.truncatingRemainder(dividingBy: reminderInterval.rawValue)
+
+        // 当周期接近结束时（误差范围内）触发
+        let threshold: TimeInterval = 1.5  // 1.5秒误差范围，避免重复触发
+        if (reminderInterval.rawValue - cyclePosition) <= threshold {
+            print("🔔 触发间隔提醒: \(activityName) (累计: \(String(format: "%.1f", totalElapsed))秒)")
+
+            // 触发提醒
+            triggerReminder()
+
+            // 不需要更新 lastReminderTriggerTime - 下次检查会自动基于总时间重新计算
+        }
+    }
+
+    /// 触发提醒 - 播放系统提示音 + 震动（仅 App 内）
+    private func triggerReminder() {
+        print("🔔 触发间隔提醒: \(activityName)")
+
+        // 震动反馈
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        generator.notificationOccurred(.warning)
+
+        // 如果设备静音，则提供更强的震动反馈
+        let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
+        impactGenerator.impactOccurred()
+
+        // 播放系统提示音（系统会自动处理，不阻塞）
+        AudioServicesPlaySystemSoundWithCompletion(1015, nil)
+    }
+
+    /// 格式化时长
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let hours = Int(seconds) / 3600
+        let minutes = Int(seconds) / 60 % 60
+
+        if hours > 0 {
+            return "\(hours)小时\(minutes)分钟"
+        } else {
+            return "\(minutes)分钟"
+        }
+    }
+
+    /// 格式化倒计时
+    private func formatCountdown(_ seconds: TimeInterval) -> String {
+        let minutes = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return String(format: "%02d:%02d", minutes, secs)
     }
 }
 
 // Color.init(hex:) 扩展已在 Category.swift 中定义
+// ReminderInterval 枚举在 ReminderIntervalPickerView.swift 中定义

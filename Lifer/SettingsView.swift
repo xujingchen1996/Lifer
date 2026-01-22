@@ -10,8 +10,17 @@ import SwiftData
 
 struct SettingsView: View {
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
-    @AppStorage("darkModeEnabled") private var darkModeEnabled = false
+    @AppStorage("themeMode") private var themeModeRawValue = "system"
     @AppStorage("soundEnabled") private var soundEnabled = true
+
+    private var currentThemeModeDisplay: String {
+        switch themeModeRawValue {
+        case "light": return "浅色"
+        case "dark": return "深色"
+        case "system": return "跟随系统"
+        default: return "跟随系统"
+        }
+    }
     
     @Environment(\.modelContext) private var modelContext
     @Query private var records: [TimerRecord]
@@ -39,10 +48,19 @@ struct SettingsView: View {
                 
                 // 外观设置
                 Section(header: Text("外观")) {
-                    Toggle("深色模式", isOn: $darkModeEnabled)
-                    
-                    ColorPicker("主题颜色", selection: .constant(Color.blue))
-                        .disabled(true) // 在未来版本实现
+                    NavigationLink {
+                        AppearanceSettingsView()
+                    } label: {
+                        HStack {
+                            Text("外观")
+                            Spacer()
+                            Text(currentThemeModeDisplay)
+                                .foregroundColor(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
                 
                 // 声音设置

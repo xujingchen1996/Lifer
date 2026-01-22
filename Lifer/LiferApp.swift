@@ -10,8 +10,17 @@ import SwiftData
 
 @main
 struct LiferApp: App {
-    // 深色模式设置
-    @AppStorage("darkModeEnabled") private var darkModeEnabled = false
+    // 主题模式设置 (浅色/深色/跟随系统)
+    @AppStorage("themeMode") private var themeModeRawValue = "system"
+
+    private var preferredColorScheme: ColorScheme? {
+        switch themeModeRawValue {
+        case "light": return .light
+        case "dark": return .dark
+        case "system": return nil
+        default: return nil
+        }
+    }
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -33,7 +42,7 @@ struct LiferApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .preferredColorScheme(darkModeEnabled ? .dark : .light)  // 修复: 深色模式支持
+                .preferredColorScheme(preferredColorScheme)
         }
         .modelContainer(sharedModelContainer)
     }

@@ -18,8 +18,11 @@ public struct LiferActivityAttributes: ActivityAttributes {
         /// 已经过的时间（秒）
         public var elapsedTime: TimeInterval
 
-        /// 活动是否进行中（true=运行中，false=已暂停）
+        /// 活动是否进行中（true=运行中，false=已停止）
         public var isActive: Bool
+
+        /// 是否暂停（用于跟踪暂停状态）
+        public var isPaused: Bool
 
         /// 活动开始时间
         public var startTime: Date
@@ -33,12 +36,14 @@ public struct LiferActivityAttributes: ActivityAttributes {
         public init(
             elapsedTime: TimeInterval,
             isActive: Bool,
+            isPaused: Bool = false,
             startTime: Date,
             lastUpdateTime: Date,
             isDarkMode: Bool = false
         ) {
             self.elapsedTime = elapsedTime
             self.isActive = isActive
+            self.isPaused = isPaused
             self.startTime = startTime
             self.lastUpdateTime = lastUpdateTime
             self.isDarkMode = isDarkMode

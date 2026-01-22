@@ -11,6 +11,7 @@ import SwiftData
 struct HistoryView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TimerRecord.startTime, order: .forward) private var allRecords: [TimerRecord]
+    @Query private var customCategories: [CustomCategory]
     @State private var selectedDate: Date = Date()
     @State private var viewMode: ViewMode = .date
 
@@ -127,7 +128,7 @@ struct HistoryView: View {
                 ScrollView {
                     LazyVStack(spacing: 8) {
                         ForEach(dayRecords) { record in
-                            RecordRow(record: record)
+                            RecordRow(record: record, customCategories: customCategories)
                         }
                     }
                     .padding()
@@ -160,7 +161,8 @@ struct HistoryView: View {
                     ForEach(grouped.keys.sorted(), id: \.self) { categoryName in
                         CategorySectionView(
                             categoryName: categoryName,
-                            records: grouped[categoryName] ?? []
+                            records: grouped[categoryName] ?? [],
+                            customCategories: customCategories
                         )
                     }
                 }
@@ -191,15 +193,23 @@ struct HistoryView: View {
 struct CategoryHeader: View {
     let categoryName: String
     let records: [TimerRecord]
+    let customCategories: [CustomCategory]
 
     var body: some View {
         HStack(spacing: 8) {
             // 类别图标
             if let category = ActivityCategory.from(string: categoryName) {
+                // 预设分类
                 Image(systemName: category.icon)
                     .foregroundColor(category.swiftUIColor)
                     .font(.caption)
+            } else if let customCategory = customCategories.first(where: { $0.name == categoryName }) {
+                // 自定义分类
+                Image(systemName: customCategory.icon)
+                    .foregroundColor(customCategory.color)
+                    .font(.caption)
             } else {
+                // 未分类
                 Image(systemName: "star.fill")
                     .foregroundColor(.gray)
                     .font(.caption)
@@ -242,16 +252,17 @@ struct CategoryHeader: View {
 struct CategorySectionView: View {
     let categoryName: String
     let records: [TimerRecord]
+    let customCategories: [CustomCategory]
 
     var body: some View {
         VStack(spacing: 0) {
             // 类别头部
-            CategoryHeader(categoryName: categoryName, records: records)
+            CategoryHeader(categoryName: categoryName, records: records, customCategories: customCategories)
 
             // 该类别的记录列表
             VStack(spacing: 0) {
                 ForEach(records) { record in
-                    RecordRow(record: record)
+                    RecordRow(record: record, customCategories: customCategories)
 
                     if record.id != records.last?.id {
                         Divider()
@@ -269,33 +280,13 @@ struct CategorySectionView: View {
 
 struct RecordRow: View {
     let record: TimerRecord
+    var customCategories: [CustomCategory] = []
 
     var body: some View {
         NavigationLink(destination: RecordDetailView(record: record)) {
             HStack(spacing: 12) {
                 // 类别图标
-                if let category = record.category,
-                   let activityCategory = ActivityCategory.from(string: category) {
-                    ZStack {
-                        Circle()
-                            .fill(activityCategory.swiftUIColor.opacity(0.15))
-                            .frame(width: 36, height: 36)
-
-                        Image(systemName: activityCategory.icon)
-                            .foregroundColor(activityCategory.swiftUIColor)
-                            .font(.caption)
-                    }
-                } else {
-                    ZStack {
-                        Circle()
-                            .fill(Color.gray.opacity(0.15))
-                            .frame(width: 36, height: 36)
-
-                        Image(systemName: "star.fill")
-                            .foregroundColor(.gray)
-                            .font(.caption)
-                    }
-                }
+                categoryIcon(for: record.category)
 
                 // 信息
                 VStack(alignment: .leading, spacing: 2) {
@@ -344,6 +335,46 @@ struct RecordRow: View {
             .background(Color(uiColor: .secondarySystemBackground))
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func categoryIcon(for categoryName: String?) -> some View {
+        if let category = categoryName,
+           let activityCategory = ActivityCategory.from(string: category) {
+            // 预设分类
+            ZStack {
+                Circle()
+                    .fill(activityCategory.swiftUIColor.opacity(0.15))
+                    .frame(width: 36, height: 36)
+
+                Image(systemName: activityCategory.icon)
+                    .foregroundColor(activityCategory.swiftUIColor)
+                    .font(.caption)
+            }
+        } else if let category = categoryName,
+                  let customCategory = customCategories.first(where: { $0.name == category }) {
+            // 自定义分类
+            ZStack {
+                Circle()
+                    .fill(customCategory.color.opacity(0.15))
+                    .frame(width: 36, height: 36)
+
+                Image(systemName: customCategory.icon)
+                    .foregroundColor(customCategory.color)
+                    .font(.caption)
+            }
+        } else {
+            // 未分类
+            ZStack {
+                Circle()
+                    .fill(Color.gray.opacity(0.15))
+                    .frame(width: 36, height: 36)
+
+                Image(systemName: "star.fill")
+                    .foregroundColor(.gray)
+                    .font(.caption)
+            }
+        }
     }
 
     private func formatTime(_ date: Date) -> String {
