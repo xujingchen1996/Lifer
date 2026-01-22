@@ -9,6 +9,16 @@
 			<key>orderHint</key>
 			<integer>0</integer>
 		</dict>
+		<key>LiferTests.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>2</integer>
+		</dict>
+		<key>LiferUITests.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>3</integer>
+		</dict>
 		<key>LiferWidget.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
@@ -17,7 +27,30 @@
 		<key>LiferWidgetExtension.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>0</integer>
+			<integer>1</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>8F855FDA2D91515A00AF8F22</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>8F855FED2D91515B00AF8F22</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>8F855FF72D91515B00AF8F22</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>8FB17A602F21181D00A5801C</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>
