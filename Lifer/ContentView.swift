@@ -19,11 +19,14 @@ struct ContentView: View {
                 }
                 .tag(0)
             
-            HistoryView()
-                .tabItem {
-                    Label("历史", systemImage: "calendar")
-                }
-                .tag(1)
+            NavigationStack {
+                HistoryView()
+                    .navigationTitle("历史记录")
+            }
+            .tabItem {
+                Label("历史", systemImage: "calendar")
+            }
+            .tag(1)
             
             TimerView()
                 .tabItem {

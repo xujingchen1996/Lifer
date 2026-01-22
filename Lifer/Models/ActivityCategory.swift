@@ -1,25 +1,28 @@
 //
-//  Category.swift
+//  ActivityCategory.swift
 //  Lifer
 //
-//  活动类别枚举 - 预设类别 + 自定义支持
+//  活动类别枚举 - 预设类别
 //
 
 import SwiftUI
 
 /// 活动类别枚举
-enum Category: String, CaseIterable, Codable {
+enum ActivityCategory: String, CaseIterable, Codable {
     // 预设类别
     case sports = "运动"
     case reading = "阅读"
     case work = "工作"
     case study = "学习"
     case meditation = "冥想"
-    case exercise = "健身"
+    case entertainment = "娱乐"   // 替代健身
     case writing = "写作"
     case coding = "编程"
     case music = "音乐"
-    case custom = "自定义"
+    case shopping = "购物"        // 新增
+    case gaming = "游戏"          // 新增
+    case travel = "旅行"          // 新增
+    case movie = "电影"           // 新增
 
     /// 类别对应的 SF Symbol 图标
     var icon: String {
@@ -29,11 +32,14 @@ enum Category: String, CaseIterable, Codable {
         case .work: return "briefcase.fill"
         case .study: return "graduationcap.fill"
         case .meditation: return "sparkles"
-        case .exercise: return "figure.strengthtraining.trainer"
+        case .entertainment: return "tv.fill"
         case .writing: return "pencil"
         case .coding: return "keyboard"
         case .music: return "music.note"
-        case .custom: return "star.fill"
+        case .shopping: return "cart.fill"
+        case .gaming: return "gamecontroller.fill"
+        case .travel: return "airplane"
+        case .movie: return "film.fill"
         }
     }
 
@@ -45,11 +51,14 @@ enum Category: String, CaseIterable, Codable {
         case .work: return "#007AFF"        // 蓝色
         case .study: return "#AF52DE"       // 紫色
         case .meditation: return "#32D74B"   // 青色
-        case .exercise: return "#FF3B30"    // 红色
+        case .entertainment: return "#FF2D55" // 粉色
         case .writing: return "#FFCC00"     // 黄色
         case .coding: return "#8E8E93"      // 灰色
-        case .music: return "#FF2D55"       // 粉色
-        case .custom: return "#5856D6"      // 靛蓝色
+        case .music: return "#FF3B30"       // 红色
+        case .shopping: return "#FF9500"    // 橙色
+        case .gaming: return "#5856D6"      // 靛蓝色
+        case .travel: return "#32D74B"      // 青色
+        case .movie: return "#FF3B30"       // 红色
         }
     }
 
@@ -57,29 +66,19 @@ enum Category: String, CaseIterable, Codable {
     var swiftUIColor: Color {
         Color(hex: color) ?? .blue
     }
-
-    /// 是否为自定义类别
-    var isCustom: Bool {
-        self == .custom
-    }
 }
 
-// MARK: - Category 扩展
+// MARK: - ActivityCategory 扩展
 
-extension Category {
-    /// 获取所有非自定义类别
-    static var presetCategories: [Category] {
-        allCases.filter { !$0.isCustom }
+extension ActivityCategory {
+    /// 获取所有预设类别（就是全部，因为不再有自定义类别在 enum 中）
+    static var presetCategories: [ActivityCategory] {
+        allCases
     }
 
-    /// 从字符串创建 Category (支持自定义类别名称)
-    static func from(string: String) -> Category {
-        // 首先尝试匹配预设类别
-        if let category = Category(rawValue: string) {
-            return category
-        }
-        // 如果不匹配，返回自定义类别
-        return .custom
+    /// 从字符串创建 ActivityCategory
+    static func from(string: String) -> ActivityCategory? {
+        return ActivityCategory(rawValue: string)
     }
 
     /// 获取本地化显示名称

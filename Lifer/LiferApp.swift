@@ -18,7 +18,8 @@ struct LiferApp: App {
             Item.self,
             TimerRecord.self,
             Activity.self,
-            UserAchievement.self  // 修复: 添加缺失的 UserAchievement 模型
+            UserAchievement.self,
+            CustomCategory.self  // 自定义类别模型
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

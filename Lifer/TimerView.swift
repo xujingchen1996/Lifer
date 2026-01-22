@@ -29,8 +29,8 @@ struct TimerView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     // 类别选择状态
-    @State private var selectedCategory: Category = .reading
-    @State private var customCategoryName: String = ""
+    @State private var selectedCategoryName: String = "阅读"
+    @State private var selectedCategory: ActivityCategory = .reading
 
     // Live Activity 状态
     @State private var liveActivity: LiveActivity?
@@ -38,6 +38,45 @@ struct TimerView: View {
 
     // 最近使用的活动列表
     @Query(sort: \Lifer.Activity.name) private var recentActivities: [Lifer.Activity]
+    @Query private var customCategories: [CustomCategory]
+
+    // 根据类别名称获取图标和颜色
+    private var currentCategoryIcon: String {
+        // 先检查预设类别
+        if let presetCategory = ActivityCategory.from(string: selectedCategoryName) {
+            return presetCategory.icon
+        }
+        // 再检查自定义类别
+        if let customCategory = customCategories.first(where: { $0.name == selectedCategoryName }) {
+            return customCategory.icon
+        }
+        return "star.fill"
+    }
+
+    private var currentCategoryColor: Color {
+        // 先检查预设类别
+        if let presetCategory = ActivityCategory.from(string: selectedCategoryName) {
+            return presetCategory.swiftUIColor
+        }
+        // 再检查自定义类别
+        if let customCategory = customCategories.first(where: { $0.name == selectedCategoryName }) {
+            return customCategory.color
+        }
+        return .purple
+    }
+
+    private var currentCategoryColorHex: String {
+        // 先检查预设类别
+        if let presetCategory = ActivityCategory.from(string: selectedCategoryName) {
+            return presetCategory.color
+        }
+        // 再检查自定义类别
+        if let customCategory = customCategories.first(where: { $0.name == selectedCategoryName }) {
+            return customCategory.colorHex
+        }
+        return "#5856D6"
+    }
+
     var body: some View {
         ZStack {
             // 背景
@@ -285,17 +324,14 @@ struct TimerView: View {
 
                 // 类别选择器 - 使用 NavigationLink 而不是 Button
                 NavigationLink {
-                    CategoryPickerView(
-                        selectedCategory: $selectedCategory,
-                        customCategoryName: $customCategoryName
-                    )
+                    CategoryPickerView(selectedCategoryName: $selectedCategoryName)
                 } label: {
                     HStack {
-                        Image(systemName: selectedCategory.icon)
-                            .foregroundColor(selectedCategory.swiftUIColor)
+                        Image(systemName: currentCategoryIcon)
+                            .foregroundColor(currentCategoryColor)
                             .font(.title3)
 
-                        Text(selectedCategory == .custom && !customCategoryName.isEmpty ? customCategoryName : selectedCategory.localizedName)
+                        Text(selectedCategoryName)
                             .foregroundColor(.primary)
 
                         Spacer()
@@ -342,6 +378,7 @@ struct TimerView: View {
     // 开始计时
     private func startTimer() {
         let record = TimerRecord(activityName: activityName)
+        record.category = selectedCategoryName
         modelContext.insert(record)
         currentRecord = record
 
@@ -493,8 +530,8 @@ struct TimerView: View {
 
         let attributes = LiferActivityAttributes(
             activityName: activityName,
-            iconName: selectedCategory.icon,
-            colorHex: selectedCategory.color,
+            iconName: currentCategoryIcon,
+            colorHex: currentCategoryColorHex,
             startTime: Date()
         )
 
