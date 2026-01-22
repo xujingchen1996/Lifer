@@ -93,3 +93,9 @@ iOSInjectionProject/
 firebase-debug.log
 google-services.json
 GoogleService-Info.plist
+
+# Project docs (local reference)
+CLAUDE.md
+PROGRESS.md
+docs/
+*.log
