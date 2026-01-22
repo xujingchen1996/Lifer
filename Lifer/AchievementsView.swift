@@ -10,12 +10,20 @@ import SwiftData
 
 struct AchievementsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var achievements: [UserAchievement]
-    
+    @Query(animation: .spring()) private var achievements: [UserAchievement]
+
     // 使用State管理UI状态
     @State private var isLoading = true
-    @State private var unlockedAchievements: [UserAchievement] = []
-    @State private var inProgressAchievements: [UserAchievement] = []
+
+    // 计算属性：已解锁成就 (性能优化：无需 @State)
+    private var unlockedAchievements: [UserAchievement] {
+        achievements.filter { $0.isUnlocked }
+    }
+
+    // 计算属性：进行中成就 (性能优化：无需 @State)
+    private var inProgressAchievements: [UserAchievement] {
+        achievements.filter { !$0.isUnlocked }
+    }
     
     var body: some View {
         NavigationStack {
@@ -107,23 +115,19 @@ struct AchievementsView: View {
     private func loadAchievements() {
         // 避免重复加载
         guard isLoading else { return }
-        
+
         // 确保有默认成就
         if achievements.isEmpty {
             createDefaultAchievements()
         }
-        
+
         // 在后台线程处理数据
         DispatchQueue.global(qos: .userInitiated).async {
             // 异步更新成就状态
             updateAchievementsAsync()
-            
-            // 回到主线程更新UI
+
+            // 回到主线程更新UI (不再需要手动更新数组，使用计算属性)
             DispatchQueue.main.async {
-                // 分类成就
-                unlockedAchievements = achievements.filter { $0.isUnlocked }
-                inProgressAchievements = achievements.filter { !$0.isUnlocked }
-                
                 // 完成加载
                 isLoading = false
             }

@@ -7,6 +7,11 @@
 
 import SwiftUI
 import SwiftData
+import Combine
+import ActivityKit
+
+// 类型别名以避免命名冲突
+typealias LiveActivity = ActivityKit.Activity<LiferActivityAttributes>
 
 struct TimerView: View {
     @Environment(\.modelContext) private var modelContext
@@ -15,19 +20,30 @@ struct TimerView: View {
     @State private var activityName = ""
     @State private var currentRecord: TimerRecord?
     @State private var elapsedTime: TimeInterval = 0
-    @State private var timer: Timer?
     @State private var longPressProgress: CGFloat = 0
-    @State private var isLongPressing = false
-    
+    @State private var longPressTimer: Timer?
+
+    // Combine 订阅管理
+    @State private var cancellables = Set<AnyCancellable>()
+    @State private var backgroundTime: Date?
+    @Environment(\.scenePhase) private var scenePhase
+
+    // 类别选择状态
+    @State private var selectedCategory: Category = .reading
+    @State private var customCategoryName: String = ""
+
+    // Live Activity 状态
+    @State private var liveActivity: LiveActivity?
+    @State private var liveActivityUpdateTimer: Timer?
+
     // 最近使用的活动列表
-    @Query(sort: \Activity.name) private var recentActivities: [Activity]
-    
+    @Query(sort: \Lifer.Activity.name) private var recentActivities: [Lifer.Activity]
     var body: some View {
         ZStack {
             // 背景
             Color(UIColor.systemBackground)
                 .ignoresSafeArea()
-            
+
             if isTimerActive {
                 // 计时中界面
                 activeTimerView
@@ -38,6 +54,32 @@ struct TimerView: View {
         }
         .sheet(isPresented: $showingActivityInput) {
             activityInputView
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            handleScenePhaseChange(from: oldPhase, to: newPhase)
+        }
+    }
+
+    // MARK: - 后台计时处理
+
+    private func handleScenePhaseChange(from oldPhase: ScenePhase, to newPhase: ScenePhase) {
+        guard isTimerActive && currentRecord?.isActive == true else { return }
+
+        switch newPhase {
+        case .background:
+            // 记录进入后台的时间
+            backgroundTime = Date()
+        case .active:
+            // 从后台恢复时，计算实际经过时间
+            if let bgTime = backgroundTime {
+                let elapsedInBackground = Date().timeIntervalSince(bgTime)
+                elapsedTime += elapsedInBackground
+                backgroundTime = nil
+            }
+        default:
+            break
         }
     }
     
@@ -178,42 +220,50 @@ struct TimerView: View {
                     Circle()
                         .fill(Color.red.opacity(0.2))
                         .frame(width: 80, height: 80)
-                    
+
                     Circle()
                         .trim(from: 0, to: longPressProgress)
                         .stroke(Color.red, lineWidth: 4)
                         .frame(width: 80, height: 80)
                         .rotationEffect(.degrees(-90))
-                    
+
                     Image(systemName: "stop.fill")
                         .font(.system(size: 30))
                         .foregroundColor(.red)
                 }
                 .gesture(
-                    LongPressGesture(minimumDuration: 3)
-                        .onChanged { _ in
-                            isLongPressing = true
-                        }
-                        .onEnded { _ in
-                            endTimer()
-                            isLongPressing = false
-                            longPressProgress = 0
-                        }
-                )
-                .simultaneousGesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { _ in
-                            if isLongPressing {
-                                withAnimation {
+                            // 开始长按
+                            if longPressTimer == nil {
+                                // 每 0.05 秒更新一次进度
+                                longPressTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
                                     if longPressProgress < 1.0 {
-                                        longPressProgress += 0.03
+                                        longPressProgress += 0.05 / 1.5  // 1.5秒完成
+                                    } else {
+                                        // 达到最大值，触发停止
+                                        longPressTimer?.invalidate()
+                                        longPressTimer = nil
+                                        endTimer()
+                                        withAnimation(.easeOut(duration: 0.3)) {
+                                            longPressProgress = 0
+                                        }
                                     }
                                 }
                             }
                         }
                         .onEnded { _ in
-                            isLongPressing = false
-                            longPressProgress = 0
+                            // 手指离开，取消计时器并重置进度
+                            if let timer = longPressTimer {
+                                timer.invalidate()
+                                longPressTimer = nil
+                            }
+                            // 只有进度没满时才重置
+                            if longPressProgress < 1.0 {
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    longPressProgress = 0
+                                }
+                            }
                         }
                 )
             }
@@ -223,15 +273,46 @@ struct TimerView: View {
     
     // 活动输入视图
     private var activityInputView: some View {
-        NavigationView {
-            VStack {
+        NavigationStack {
+            VStack(spacing: 16) {
+                // 活动名称输入
                 TextField("请输入活动名称", text: $activityName)
                     .font(.title3)
                     .padding()
                     .background(Color(UIColor.secondarySystemBackground))
                     .cornerRadius(10)
                     .padding(.horizontal)
-                
+
+                // 类别选择器 - 使用 NavigationLink 而不是 Button
+                NavigationLink {
+                    CategoryPickerView(
+                        selectedCategory: $selectedCategory,
+                        customCategoryName: $customCategoryName
+                    )
+                } label: {
+                    HStack {
+                        Image(systemName: selectedCategory.icon)
+                            .foregroundColor(selectedCategory.swiftUIColor)
+                            .font(.title3)
+
+                        Text(selectedCategory == .custom && !customCategoryName.isEmpty ? customCategoryName : selectedCategory.localizedName)
+                            .foregroundColor(.primary)
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    }
+                    .padding()
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(10)
+                }
+                .padding(.horizontal)
+
+                Spacer()
+
+                // 开始计时按钮
                 Button("开始计时") {
                     startTimer()
                     showingActivityInput = false
@@ -244,8 +325,6 @@ struct TimerView: View {
                 .cornerRadius(10)
                 .padding()
                 .disabled(activityName.isEmpty)
-                
-                Spacer()
             }
             .padding(.top)
             .navigationTitle("新活动")
@@ -259,38 +338,53 @@ struct TimerView: View {
             }
         }
     }
-    
+
     // 开始计时
     private func startTimer() {
         let record = TimerRecord(activityName: activityName)
         modelContext.insert(record)
         currentRecord = record
-        
+
         // 检查活动是否已存在，不存在则创建
         if !recentActivities.contains(where: { $0.name == activityName }) {
             let activity = Activity(name: activityName)
             modelContext.insert(activity)
         }
-        
+
         isTimerActive = true
         elapsedTime = 0
-        
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            elapsedTime += 0.1
+
+        // 使用 Combine Timer 替代 Foundation Timer (性能优化: 1秒更新一次)
+        Timer.publish(every: 1.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                elapsedTime += 1.0
+            }
+            .store(in: &cancellables)
+
+        // 启动 Live Activity (iOS 16.1+)
+        if #available(iOS 16.1, *) {
+            startLiveActivity()
         }
     }
     
     // 暂停计时
     private func pauseTimer() {
-        timer?.invalidate()
-        
+        // 取消所有计时器订阅
+        cancellables.removeAll()
+
         if var record = currentRecord {
             record.isActive = false
-            
+
             // 记录暂停时间
             var intervals = record.pauseIntervals ?? []
             intervals.append(PauseInterval(pauseTime: Date()))
             record.pauseIntervals = intervals
+        }
+
+        // 暂停 Live Activity
+        if #available(iOS 16.1, *) {
+            pauseLiveActivity()
         }
     }
     
@@ -298,7 +392,7 @@ struct TimerView: View {
     private func resumeTimer() {
         if var record = currentRecord {
             record.isActive = true
-            
+
             // 记录恢复时间
             if var intervals = record.pauseIntervals, !intervals.isEmpty {
                 var lastInterval = intervals.removeLast()
@@ -306,25 +400,35 @@ struct TimerView: View {
                 intervals.append(lastInterval)
                 record.pauseIntervals = intervals
             }
-            
-            timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-                elapsedTime += 0.1
-            }
+
+            // 使用 Combine Timer (性能优化: 1秒更新一次)
+            Timer.publish(every: 1.0, on: .main, in: .common)
+                .autoconnect()
+                .sink { _ in
+                    elapsedTime += 1.0
+                }
+                .store(in: &cancellables)
+        }
+
+        // 恢复 Live Activity
+        if #available(iOS 16.1, *) {
+            resumeLiveActivity()
         }
     }
     
     // 结束计时
     private func endTimer() {
-        timer?.invalidate()
-        
+        // 取消所有计时器订阅
+        cancellables.removeAll()
+
         if let record = currentRecord {
             // 直接修改原始对象，而不是创建本地副本
             record.endTime = Date()
             record.totalDuration = elapsedTime
             record.isActive = false
-            
+
             print("保存计时记录: 开始=\(record.startTime), 结束=\(record.endTime), 时长=\(record.totalDuration)")
-            
+
             // 尝试保存并捕获错误
             do {
                 try modelContext.save()
@@ -335,10 +439,16 @@ struct TimerView: View {
         } else {
             print("警告: 没有找到当前计时记录")
         }
-        
+
         isTimerActive = false
         currentRecord = nil
         activityName = ""
+        backgroundTime = nil
+
+        // 结束 Live Activity
+        if #available(iOS 16.1, *) {
+            endLiveActivity()
+        }
     }
     
     // 格式化时间显示
@@ -346,26 +456,161 @@ struct TimerView: View {
         let hours = Int(timeInterval) / 3600
         let minutes = Int(timeInterval) / 60 % 60
         let seconds = Int(timeInterval) % 60
-        
+
         return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+    }
+
+    // MARK: - Live Activity 管理
+
+    /// 开始 Live Activity
+    @available(iOS 16.1, *)
+    private func startLiveActivity() {
+        // 检查设备是否支持
+        #if os(iOS)
+        let device = UIDevice.current
+        let userInterfaceIdiom = device.userInterfaceIdiom
+
+        // 检查权限
+        let authInfo = ActivityAuthorizationInfo()
+        print("🔍 Live Activity 检查:")
+        print("  - 设备: \(userInterfaceIdiom == .phone ? "iPhone" : "iPad")")
+        print("  - 系统版本: \(UIDevice.current.systemVersion)")
+        print("  - 权限启用: \(authInfo.areActivitiesEnabled)")
+
+        if userInterfaceIdiom == .pad {
+            print("⚠️ 注意: iPad 不支持 Dynamic Island")
+        }
+
+        guard authInfo.areActivitiesEnabled else {
+            print("❌ Live Activities 未启用")
+            print("💡 请在 iPhone 设置 > Lifer > 启用实时活动")
+            return
+        }
+        #else
+        print("❌ Live Activity 仅支持 iOS")
+        return
+        #endif
+
+        let attributes = LiferActivityAttributes(
+            activityName: activityName,
+            iconName: selectedCategory.icon,
+            colorHex: selectedCategory.color,
+            startTime: Date()
+        )
+
+        // 读取深色模式设置
+        let darkModeEnabled = UserDefaults.standard.bool(forKey: "darkModeEnabled")
+
+        let initialState = LiferActivityAttributes.ContentState(
+            elapsedTime: 0,
+            isActive: true,
+            startTime: Date(),
+            lastUpdateTime: Date(),
+            isDarkMode: darkModeEnabled
+        )
+
+        do {
+            // 使用 ActivityKit 启动 Live Activity
+            liveActivity = try ActivityKit.Activity.request(
+                attributes: attributes,
+                content: .init(state: initialState, staleDate: nil),
+                pushType: nil
+            )
+            print("✅ Live Activity 已启动")
+            if let id = liveActivity?.id {
+                print("   Activity ID: \(id)")
+            }
+
+            // 启动定期更新计时器
+            startLiveActivityUpdateTimer()
+        } catch {
+            print("❌ 启动 Live Activity 失败:")
+            print("   \(error.localizedDescription)")
+            print("\n💡 提示:")
+            print("   1. 确保在设置中启用了实时活动")
+            print("   2. Live Activity 需要 Widget Extension 支持")
+            print("   3. 当前实现可能需要额外配置")
+        }
+    }
+
+    /// 更新 Live Activity (定期调用)
+    @available(iOS 16.1, *)
+    private func updateLiveActivity() {
+        guard let liveActivity = liveActivity else { return }
+
+        // 读取深色模式设置
+        let darkModeEnabled = UserDefaults.standard.bool(forKey: "darkModeEnabled")
+
+        let updatedState = LiferActivityAttributes.ContentState(
+            elapsedTime: elapsedTime,
+            isActive: currentRecord?.isActive ?? true,
+            startTime: Date().addingTimeInterval(-elapsedTime),
+            lastUpdateTime: Date(),
+            isDarkMode: darkModeEnabled
+        )
+
+        Task {
+            await liveActivity.update(.init(state: updatedState, staleDate: nil))
+        }
+    }
+
+    /// 暂停 Live Activity
+    @available(iOS 16.1, *)
+    private func pauseLiveActivity() {
+        guard let liveActivity = liveActivity else { return }
+
+        let pausedState = LiferActivityAttributes.ContentState(
+            elapsedTime: elapsedTime,
+            isActive: false,
+            startTime: Date().addingTimeInterval(-elapsedTime),
+            lastUpdateTime: Date()
+        )
+
+        Task {
+            await liveActivity.update(.init(state: pausedState, staleDate: nil))
+        }
+    }
+
+    /// 恢复 Live Activity
+    @available(iOS 16.1, *)
+    private func resumeLiveActivity() {
+        updateLiveActivity()
+    }
+
+    /// 结束 Live Activity
+    @available(iOS 16.1, *)
+    private func endLiveActivity() {
+        guard let liveActivity = liveActivity else { return }
+
+        let finalState = LiferActivityAttributes.ContentState(
+            elapsedTime: elapsedTime,
+            isActive: false,
+            startTime: Date().addingTimeInterval(-elapsedTime),
+            lastUpdateTime: Date()
+        )
+
+        Task {
+            await liveActivity.end(nil, dismissalPolicy: .immediate)
+        }
+
+        self.liveActivity = nil
+        liveActivityUpdateTimer?.invalidate()
+        liveActivityUpdateTimer = nil
+
+        print("Live Activity 已结束")
+    }
+
+    /// 启动 Live Activity 更新计时器
+    private func startLiveActivityUpdateTimer() {
+        // 每秒更新一次 Live Activity
+        liveActivityUpdateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            guard self.liveActivity != nil else { return }
+
+            if #available(iOS 16.1, *) {
+                self.updateLiveActivity()
+            }
+        }
     }
 }
 
-// 辅助扩展，用于从HEX字符串创建Color
-extension Color {
-    init?(hex: String) {
-        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
-        
-        var rgb: UInt64 = 0
-        
-        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
-        
-        self.init(
-            .sRGB,
-            red: Double((rgb & 0xFF0000) >> 16) / 255.0,
-            green: Double((rgb & 0x00FF00) >> 8) / 255.0,
-            blue: Double(rgb & 0x0000FF) / 255.0
-        )
-    }
-}
+// Color.init(hex:) 扩展已在 Category.swift 中定义

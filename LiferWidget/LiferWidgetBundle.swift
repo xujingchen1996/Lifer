@@ -11,8 +11,6 @@ import SwiftUI
 @main
 struct LiferWidgetBundle: WidgetBundle {
     var body: some Widget {
-        LiferWidget()
-        LiferWidgetControl()
         LiferWidgetLiveActivity()
     }
 }

@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		8FB17A642F21181D00A5801C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB17A632F21181D00A5801C /* WidgetKit.framework */; };
+		8FB17A662F21181D00A5801C /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB17A652F21181D00A5801C /* SwiftUI.framework */; };
+		8FB17A772F21181E00A5801C /* LiferWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8FB17A612F21181D00A5801C /* LiferWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		8F855FEF2D91515B00AF8F22 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,17 +27,74 @@
 			remoteGlobalIDString = 8F855FDA2D91515A00AF8F22;
 			remoteInfo = Lifer;
 		};
+		8FB17A752F21181E00A5801C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F855FD32D91515A00AF8F22 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8FB17A602F21181D00A5801C;
+			remoteInfo = LiferWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8FB17A7C2F21181E00A5801C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				8FB17A772F21181E00A5801C /* LiferWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		8F855FDB2D91515A00AF8F22 /* Lifer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lifer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8F855FEE2D91515B00AF8F22 /* LiferTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LiferTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8F855FF82D91515B00AF8F22 /* LiferUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LiferUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8FB17A612F21181D00A5801C /* LiferWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LiferWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8FB17A632F21181D00A5801C /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		8FB17A652F21181D00A5801C /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8FB1786A2F20FF1F00A5801C /* Exceptions for "Lifer" folder in "Lifer" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8F855FDA2D91515A00AF8F22 /* Lifer */;
+		};
+		8FB17A7B2F21181E00A5801C /* Exceptions for "LiferWidget" folder in "LiferWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8FB17A602F21181D00A5801C /* LiferWidgetExtension */;
+		};
+		8FB17A862F211B3800A5801C /* Exceptions for "Lifer" folder in "LiferWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				LiferActivityAttributes.swift,
+			);
+			target = 8FB17A602F21181D00A5801C /* LiferWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		"8CDD4D7F-A918-4D24-B349-" /* LiferWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LiferWidget;
+			sourceTree = "<group>";
+		};
 		8F855FDD2D91515A00AF8F22 /* Lifer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8FB1786A2F20FF1F00A5801C /* Exceptions for "Lifer" folder in "Lifer" target */,
+				8FB17A862F211B3800A5801C /* Exceptions for "Lifer" folder in "LiferWidgetExtension" target */,
+			);
 			path = Lifer;
 			sourceTree = "<group>";
 		};
@@ -43,6 +106,14 @@
 		8F855FFB2D91515B00AF8F22 /* LiferUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = LiferUITests;
+			sourceTree = "<group>";
+		};
+		8FB17A672F21181D00A5801C /* LiferWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8FB17A7B2F21181E00A5801C /* Exceptions for "LiferWidget" folder in "LiferWidgetExtension" target */,
+			);
+			path = LiferWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -69,6 +140,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8FB17A5E2F21181D00A5801C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8FB17A662F21181D00A5801C /* SwiftUI.framework in Frameworks */,
+				8FB17A642F21181D00A5801C /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -78,7 +158,10 @@
 				8F855FDD2D91515A00AF8F22 /* Lifer */,
 				8F855FF12D91515B00AF8F22 /* LiferTests */,
 				8F855FFB2D91515B00AF8F22 /* LiferUITests */,
+				8FB17A672F21181D00A5801C /* LiferWidget */,
+				8FB17A622F21181D00A5801C /* Frameworks */,
 				8F855FDC2D91515A00AF8F22 /* Products */,
+				8FB1786F2F21103D00A5801C /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -88,8 +171,26 @@
 				8F855FDB2D91515A00AF8F22 /* Lifer.app */,
 				8F855FEE2D91515B00AF8F22 /* LiferTests.xctest */,
 				8F855FF82D91515B00AF8F22 /* LiferUITests.xctest */,
+				8FB17A612F21181D00A5801C /* LiferWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		8FB1786F2F21103D00A5801C /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				"8CDD4D7F-A918-4D24-B349-" /* LiferWidget */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+		8FB17A622F21181D00A5801C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				8FB17A632F21181D00A5801C /* WidgetKit.framework */,
+				8FB17A652F21181D00A5801C /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -102,10 +203,12 @@
 				8F855FD72D91515A00AF8F22 /* Sources */,
 				8F855FD82D91515A00AF8F22 /* Frameworks */,
 				8F855FD92D91515A00AF8F22 /* Resources */,
+				8FB17A7C2F21181E00A5801C /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				8FB17A762F21181E00A5801C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				8F855FDD2D91515A00AF8F22 /* Lifer */,
@@ -163,6 +266,28 @@
 			productReference = 8F855FF82D91515B00AF8F22 /* LiferUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		8FB17A602F21181D00A5801C /* LiferWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8FB17A782F21181E00A5801C /* Build configuration list for PBXNativeTarget "LiferWidgetExtension" */;
+			buildPhases = (
+				8FB17A5D2F21181D00A5801C /* Sources */,
+				8FB17A5E2F21181D00A5801C /* Frameworks */,
+				8FB17A5F2F21181D00A5801C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8FB17A672F21181D00A5801C /* LiferWidget */,
+			);
+			name = LiferWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = LiferWidgetExtension;
+			productReference = 8FB17A612F21181D00A5801C /* LiferWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -170,8 +295,8 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1620;
-				LastUpgradeCheck = 1620;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					8F855FDA2D91515A00AF8F22 = {
 						CreatedOnToolsVersion = 16.2;
@@ -183,6 +308,9 @@
 					8F855FF72D91515B00AF8F22 = {
 						CreatedOnToolsVersion = 16.2;
 						TestTargetID = 8F855FDA2D91515A00AF8F22;
+					};
+					8FB17A602F21181D00A5801C = {
+						CreatedOnToolsVersion = 26.2;
 					};
 				};
 			};
@@ -203,6 +331,7 @@
 				8F855FDA2D91515A00AF8F22 /* Lifer */,
 				8F855FED2D91515B00AF8F22 /* LiferTests */,
 				8F855FF72D91515B00AF8F22 /* LiferUITests */,
+				8FB17A602F21181D00A5801C /* LiferWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -223,6 +352,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		8F855FF62D91515B00AF8F22 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8FB17A5F2F21181D00A5801C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -253,6 +389,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8FB17A5D2F21181D00A5801C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -265,6 +408,11 @@
 			isa = PBXTargetDependency;
 			target = 8F855FDA2D91515A00AF8F22 /* Lifer */;
 			targetProxy = 8F855FF92D91515B00AF8F22 /* PBXContainerItemProxy */;
+		};
+		8FB17A762F21181E00A5801C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8FB17A602F21181D00A5801C /* LiferWidgetExtension */;
+			targetProxy = 8FB17A752F21181E00A5801C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -303,7 +451,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 8V7CLF93D9;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -325,6 +475,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -364,7 +515,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 8V7CLF93D9;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -379,6 +532,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -391,11 +545,14 @@
 				CODE_SIGN_ENTITLEMENTS = Lifer/Lifer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Lifer/Preview Content\"";
-				DEVELOPMENT_TEAM = 8V7CLF93D9;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Lifer/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -432,11 +589,14 @@
 				CODE_SIGN_ENTITLEMENTS = Lifer/Lifer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Lifer/Preview Content\"";
-				DEVELOPMENT_TEAM = 8V7CLF93D9;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Lifer/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -471,7 +631,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8V7CLF93D9;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
@@ -494,7 +654,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8V7CLF93D9;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
@@ -516,7 +676,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8V7CLF93D9;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
@@ -538,7 +698,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8V7CLF93D9;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
@@ -552,6 +712,69 @@
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 				TEST_TARGET_NAME = Lifer;
 				XROS_DEPLOYMENT_TARGET = 2.2;
+			};
+			name = Release;
+		};
+		8FB17A792F21181E00A5801C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LiferWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LiferWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tron.Lifer.LiferWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8FB17A7A2F21181E00A5801C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LiferWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LiferWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tron.Lifer.LiferWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -590,6 +813,15 @@
 			buildConfigurations = (
 				8F8560092D91515B00AF8F22 /* Debug */,
 				8F85600A2D91515B00AF8F22 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8FB17A782F21181E00A5801C /* Build configuration list for PBXNativeTarget "LiferWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8FB17A792F21181E00A5801C /* Debug */,
+				8FB17A7A2F21181E00A5801C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

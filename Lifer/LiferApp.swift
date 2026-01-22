@@ -10,11 +10,15 @@ import SwiftData
 
 @main
 struct LiferApp: App {
+    // 深色模式设置
+    @AppStorage("darkModeEnabled") private var darkModeEnabled = false
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
             TimerRecord.self,
-            Activity.self
+            Activity.self,
+            UserAchievement.self  // 修复: 添加缺失的 UserAchievement 模型
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -28,6 +32,7 @@ struct LiferApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .preferredColorScheme(darkModeEnabled ? .dark : .light)  // 修复: 深色模式支持
         }
         .modelContainer(sharedModelContainer)
     }

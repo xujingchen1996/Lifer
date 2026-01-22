@@ -12,6 +12,11 @@ import Charts
 struct StatisticsView: View {
     @Query(sort: \TimerRecord.startTime) private var records: [TimerRecord]
     @State private var timeRange: TimeRange = .week
+
+    // 缓存计算结果 (性能优化)
+    @State private var cachedTotalDuration: TimeInterval = 0
+    @State private var cachedActivityData: [ActivityData] = []
+    @State private var cachedTrendData: [TrendData] = []
     
     enum TimeRange {
         case day, week, month, year
@@ -30,6 +35,9 @@ struct StatisticsView: View {
                     }
                     .pickerStyle(SegmentedPickerStyle())
                     .padding(.horizontal)
+                    .onChange(of: timeRange) { _, _ in
+                        updateCache()  // 时间范围变化时重新计算缓存
+                    }
                     
                     // 总计时间卡片
                     VStack(alignment: .leading) {
@@ -37,7 +45,7 @@ struct StatisticsView: View {
                             .font(.headline)
                             .foregroundColor(.secondary)
                         
-                        Text(formatDuration(totalDuration))
+                        Text(formatDuration(cachedTotalDuration))
                             .font(.system(size: 36, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
                     }
@@ -53,14 +61,14 @@ struct StatisticsView: View {
                             .font(.headline)
                             .padding(.bottom, 8)
                         
-                        if activityData.isEmpty {
+                        if cachedActivityData.isEmpty {
                             Text("暂无数据")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .padding()
                         } else {
-                            Chart(activityData) { item in
+                            Chart(cachedActivityData) { item in
                                 SectorMark(
                                     angle: .value("时长", item.duration),
                                     innerRadius: .ratio(0.6),
@@ -68,7 +76,7 @@ struct StatisticsView: View {
                                 )
                                 .foregroundStyle(by: .value("活动", item.name))
                                 .annotation(position: .overlay) {
-                                    Text(formatPercentage(item.duration, of: totalDuration))
+                                    Text(formatPercentage(item.duration, of: cachedTotalDuration))
                                         .font(.caption)
                                         .fontWeight(.bold)
                                         .foregroundColor(.white)
@@ -82,21 +90,21 @@ struct StatisticsView: View {
                     .background(Color(UIColor.secondarySystemBackground))
                     .cornerRadius(12)
                     .padding(.horizontal)
-                    
+
                     // 趋势图表
                     VStack(alignment: .leading) {
                         Text("时间趋势")
                             .font(.headline)
                             .padding(.bottom, 8)
-                        
-                        if trendData.isEmpty {
+
+                        if cachedTrendData.isEmpty {
                             Text("暂无数据")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .padding()
                         } else {
-                            Chart(trendData) { item in
+                            Chart(cachedTrendData) { item in
                                 BarMark(
                                     x: .value("日期", item.date, unit: timeRangeUnit),
                                     y: .value("时长", item.duration / 3600) // 转换为小时
@@ -122,6 +130,17 @@ struct StatisticsView: View {
             }
             .navigationTitle("统计")
         }
+        .onAppear {
+            updateCache()  // 初始加载时计算缓存
+        }
+    }
+
+    // MARK: - 缓存管理
+
+    private func updateCache() {
+        cachedTotalDuration = totalDuration
+        cachedActivityData = activityData
+        cachedTrendData = trendData
     }
     
     // 根据选择的时间范围筛选记录
